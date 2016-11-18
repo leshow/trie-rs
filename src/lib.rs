@@ -2,11 +2,8 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::collections::hash_map::Entry::{Vacant, Occupied};
 use std::fmt::Debug;
-// struct Node<V> {
-//     value: V,
-//     key: u8,
-//     children: Trie<V>,
-// }
+
+
 #[derive(Debug)]
 pub struct Trie<K, V>
     where V: Eq,
@@ -28,14 +25,6 @@ impl<K, V> Trie<K, V>
     }
 }
 
-// trait TrieSearch<V>
-//     where V: Eq
-// {
-//     fn insert<I: IntoIterator>(&self, iter: I, value: V);
-//     fn remove<I: IntoIterator>(&self, iter: I) -> bool;
-//     fn contains<I: IntoIterator>(&self, iter: I) -> bool;
-// }
-// <V> TrieSearch<V> for
 impl<K, V> Trie<K, V>
     where V: Eq,
           K: Eq + Hash + Clone
