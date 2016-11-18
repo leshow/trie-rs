@@ -95,16 +95,22 @@ impl<K, V> Trie<K, V>
     pub fn remove<I>(&mut self, key: I)
         where I: Iterator<Item = K>
     {
-
-        let mut node = self;
-        for c in key {
-            node as *mut Trie<K, V>;
-            let tmp = node;
-            if let Occupied(mut v) = self.children.entry(c) {
-                let delete = v.remove_entry();
-            }
-        }
-
+        // let mut node = self;
+        // for c in key {
+        //     let tmp = node;
+        //     if let Occupied(mut v) = tmp.entry(c.clone()) {
+        //         if let Some(t) = v.get_mut().remove_k(&c) {
+        //
+        //         } else {
+        //             break;
+        //         }
+        //     } else {
+        //         break;
+        //     }
+        // }
+    }
+    fn remove_k(&mut self, c: &K) -> Option<Trie<K, V>> {
+        self.children.remove(c)
     }
 }
 
@@ -119,6 +125,12 @@ mod tests {
         trie.insert("fib".chars(), 30);
         trie.insert("fibonacci".chars(), 30);
         trie.insert("hello".chars(), 30);
+    }
+    #[test]
+    fn test_vec_insert() {
+        let mut trie = Trie::new();
+        let b = vec![1, 2, 3, 4];
+        trie.insert(&b[..], 15);
     }
     #[test]
     fn test_contains() {
