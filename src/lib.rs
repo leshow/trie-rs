@@ -46,11 +46,17 @@ impl<K, V> Trie<K, V>
     pub fn insert<I>(&mut self, iter: I, value: V)
         where I: Iterator<Item = K>
     {
-        // if let Some(first) = iter.nth(0) {
-        //     self.children.entry(first.clone()).or_insert(Trie::new()).insert(iter, value);
-        // } else {
-        //     self.value = Some(value);
-        // }
+        let mut node = self;
+        for c in iter {
+            let tmp = node;
+            node = tmp.children.entry(c).or_insert(Trie::new());
+        }
+        node.value = Some(value);
+    }
+
+    pub fn insert_fold<I>(&mut self, iter: I, value: V)
+        where I: Iterator<Item = K>
+    {
         let node = iter.fold(self, |cur_node, c| {
             match cur_node.children.entry(c) {
                 Vacant(v) => v.insert(Trie::new()),
@@ -59,9 +65,33 @@ impl<K, V> Trie<K, V>
         });
         node.value = Some(value);
     }
-    // fn remove<I>(&self, iter: I) -> bool {
-    //     unimplemented!();
-    // }
+
+    pub fn insert_raw<I>(&mut self, iter: I, value: V)
+        where I: Iterator<Item = K>
+    {
+        let mut node = self;
+        let mut raw_ptr = node as *mut Trie<K, V>;
+        for c in iter {
+            raw_ptr = node.children.entry(c).or_insert(Trie::new());
+            unsafe {
+                node = &mut *raw_ptr;
+            }
+        }
+        node.value = Some(value);
+    }
+    fn contains_prefix<I>(&self, key: I) -> bool
+        where I: Iterator<Item = K>
+    {
+        let mut node = self;
+        for c in key {
+            if !node.children.contains_key(&c) {
+                return false;
+            }
+            let tmp = node;
+            node = tmp.children.get(&c).unwrap();
+        }
+        return true;
+    }
 }
 
 
@@ -77,5 +107,12 @@ mod tests {
         trie.insert("fibonacci".chars(), 30);
         trie.insert("hello".chars(), 30);
         println!("{:?}", trie);
+    }
+    #[test]
+    fn test_contains() {
+        let mut trie: Trie<char, u8> = Trie::new();
+        trie.insert("first".chars(), 20);
+        assert!(trie.contains_prefix("f".chars()));
+        assert!(trie.contains_prefix("fi".chars()));
     }
 }
