@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::fmt::Debug;
 // struct Node<V> {
 //     value: V,
@@ -6,20 +7,22 @@ use std::fmt::Debug;
 //     children: Trie<V>,
 // }
 #[derive(Debug)]
-struct Trie<V> {
-    value: Option<V>,
-    key: Option<u8>,
-    children: HashMap<u8, Trie<V>>,
+pub struct Trie<K, V>
+    where V: Eq,
+          K: Eq + Hash + Clone
+{
+    pub value: Option<V>,
+    pub children: HashMap<K, Trie<K, V>>,
 }
 
-impl<V> Trie<V>
-    where V: Eq
+impl<K, V> Trie<K, V>
+    where V: Eq,
+          K: Eq + Hash + Clone
 {
-    fn new() -> Trie<V> {
+    pub fn new() -> Trie<K, V> {
         Trie {
             children: HashMap::new(),
             value: None,
-            key: None,
         }
     }
 }
@@ -32,15 +35,20 @@ impl<V> Trie<V>
 //     fn contains<I: IntoIterator>(&self, iter: I) -> bool;
 // }
 // <V> TrieSearch<V> for
-impl<V> Trie<V>
-    where V: Eq
+impl<K, V> Trie<K, V>
+    where V: Eq,
+          K: Eq + Hash + Clone
 {
-    fn insert<I>(&self, iter: I, value: V)
-        where I: IntoIterator,
-              I::Item: Debug
+    pub fn insert<I>(&mut self, iter: I, value: V)
+        where I: IntoIterator<Item = K>
     {
-        for c in iter {
-            println!("{:?}", c);
+        let mut node = Trie::new();
+        for c in iter.into_iter() {
+            if self.children.contains_key(&c) {
+                node = self.children.get(&c).unwrap(); // TODO
+            } else {
+                self.children.insert(&c, Trie::new());
+            }
         }
     }
     // fn remove<I>(&self, iter: I) -> bool {
@@ -58,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        let trie = Trie::new();
+        let mut trie: Trie<char, u8> = Trie::new();
         trie.insert("first".chars(), 20);
         println!("{:?}", trie);
     }
