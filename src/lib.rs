@@ -32,21 +32,21 @@ impl<K, V> Trie<K, V>
     pub fn insert<I>(&mut self, iter: I, value: V)
         where I: Iterator<Item = K>
     {
-        // let mut node = Trie::new();
+        // let mut current_node = self;
         // for c in iter.into_iter() {
-        //     if self.children.contains_key(&c) {
-        //         node = self.children.get(&c).unwrap();
-        //     } else {
-        //         self.children.insert(&c, Trie::new());
-        //     }
+        //     let node = match current_node.children.entry(c) {
+        //         Vacant(slot) => slot.insert(Trie::new()),
+        //         Occupied(slot) => slot.into_mut(),
+        //     };
+        //     current_node = node;
         // }
-        let key_node = iter.fold(self, |current_node, c| {
-            match current_node.children.entry(c.clone()) {
+        let node = iter.fold(self, |current_node, c| {
+            match current_node.children.entry(c) {
                 Vacant(slot) => slot.insert(Trie::new()),
                 Occupied(slot) => slot.into_mut(),
             }
         });
-        key_node.value = Some(value);
+        node.value = Some(value);
     }
     // fn remove<I>(&self, iter: I) -> bool {
     //     unimplemented!();
