@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::collections::hash_map::Entry::{Vacant, Occupied};
 use std::fmt::Debug;
 // struct Node<V> {
 //     value: V,
@@ -40,16 +41,23 @@ impl<K, V> Trie<K, V>
           K: Eq + Hash + Clone
 {
     pub fn insert<I>(&mut self, iter: I, value: V)
-        where I: IntoIterator<Item = K>
+        where I: Iterator<Item = K>
     {
-        let mut node = Trie::new();
-        for c in iter.into_iter() {
-            if self.children.contains_key(&c) {
-                node = self.children.get(&c).unwrap(); // TODO
-            } else {
-                self.children.insert(&c, Trie::new());
+        // let mut node = Trie::new();
+        // for c in iter.into_iter() {
+        //     if self.children.contains_key(&c) {
+        //         node = self.children.get(&c).unwrap();
+        //     } else {
+        //         self.children.insert(&c, Trie::new());
+        //     }
+        // }
+        let key_node = iter.fold(self, |current_node, c| {
+            match current_node.children.entry(c.clone()) {
+                Vacant(slot) => slot.insert(Trie::new()),
+                Occupied(slot) => slot.into_mut(),
             }
-        }
+        });
+        key_node.value = Some(value);
     }
     // fn remove<I>(&self, iter: I) -> bool {
     //     unimplemented!();
