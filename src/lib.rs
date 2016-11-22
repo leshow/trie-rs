@@ -92,8 +92,8 @@ impl<K, V> Trie<K, V>
         }
         true
     }
-    pub fn remove<I>(&mut self, key: I)
-        where I: IntoIterator<Item = K>
+    pub fn remove<'a, I>(&mut self, key: I)
+        where I: IntoIterator<Item = &'a K>
     {
         // let mut node = self;
         // for c in key {
