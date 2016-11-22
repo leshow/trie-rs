@@ -43,21 +43,21 @@ impl<K, V> Trie<K, V>
     where V: Eq + Clone,
           K: Eq + Hash + Clone
 {
-    pub fn insert<I>(&mut self, iter: I, value: V)
-        where I: Iterator<Item = K>
+    pub fn insert_from_iter<I>(&mut self, iter: I, value: V)
+        where I: IntoIterator<Item = K>
     {
         let mut node = self;
-        for c in iter {
+        for c in iter.into_iter() {
             let tmp = node;
-            node = tmp.children.entry(c).or_insert_with(Trie::new);
+            node = tmp.children.entry(c.clone()).or_insert_with(Trie::new);
         }
         node.value = Some(value);
     }
 
     pub fn insert_fold<I>(&mut self, iter: I, value: V)
-        where I: Iterator<Item = K>
+        where I: IntoIterator<Item = K>
     {
-        let node = iter.fold(self, |cur_node, c| {
+        let node = iter.into_iter().fold(self, |cur_node, c| {
             match cur_node.children.entry(c) {
                 Vacant(v) => v.insert(Trie::new()),
                 Occupied(v) => v.into_mut(),
@@ -67,11 +67,11 @@ impl<K, V> Trie<K, V>
     }
 
     pub fn insert_raw<I>(&mut self, iter: I, value: V)
-        where I: Iterator<Item = K>
+        where I: IntoIterator<Item = K>
     {
         let mut node = self;
         let mut raw_ptr: *mut Trie<K, V>; // node as *mut Trie<K, V>;
-        for c in iter {
+        for c in iter.into_iter() {
             raw_ptr = node.children.entry(c).or_insert_with(Trie::new);
             unsafe {
                 node = &mut *raw_ptr;
@@ -80,10 +80,10 @@ impl<K, V> Trie<K, V>
         node.value = Some(value);
     }
     pub fn contains_prefix<I>(&self, key: I) -> bool
-        where I: Iterator<Item = K>
+        where I: IntoIterator<Item = K>
     {
         let mut node = self;
-        for c in key {
+        for c in key.into_iter() {
             if !node.children.contains_key(&c) {
                 return false;
             }
@@ -93,7 +93,7 @@ impl<K, V> Trie<K, V>
         true
     }
     pub fn remove<I>(&mut self, key: I)
-        where I: Iterator<Item = K>
+        where I: IntoIterator<Item = K>
     {
         // let mut node = self;
         // for c in key {
@@ -120,8 +120,9 @@ mod tests {
     use super::Trie;
     #[test]
     fn test_insert() {
-        let mut trie: Trie<char, u8> = Trie::new();
-        trie.insert("first".chars(), 20);
+        let mut trie = Trie::new();
+        let a = String::from("first");
+        trie.insert(&a, 20);
         trie.insert("fib".chars(), 30);
         trie.insert("fibonacci".chars(), 30);
         trie.insert("hello".chars(), 30);
