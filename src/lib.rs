@@ -92,6 +92,20 @@ impl<K, V> Trie<K, V>
         }
         true
     }
+    pub fn map<'a, I, F, U>(&mut self, f: F)
+        where F: FnOnce(V) -> U
+    {
+        let mut stack = Vec::new();
+        stack.push(self);
+
+        while let Some(mut node) = stack.pop() {
+            let newV = node.value.map(|v| f(v));
+            node.value = newV;
+            for (_, val) in node.children.iter_mut() {
+                stack.push(val);
+            }
+        }
+    }
     pub fn remove<'a, I>(&mut self, key: I)
         where I: IntoIterator<Item = &'a K>
     {
