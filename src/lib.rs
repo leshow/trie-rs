@@ -87,34 +87,33 @@ impl<K, V> Trie<K, V>
             if !node.children.contains_key(c) {
                 return false;
             }
-            let tmp = node;
-            node = tmp.children.get(&c).unwrap();
+            std::mem::replace(&mut node, node.children.get(&c).unwrap());
         }
         true
     }
-    pub fn map<'a, I, F, U>(&mut self, f: F)
-        where F: FnOnce(V) -> U
+    pub fn map<'a, F, U>(&mut self, f: F)
+        where F: Fn(V) -> V
     {
-        let mut stack = Vec::new();
-        stack.push(self);
-
-        while let Some(mut node) = stack.pop() {
-            let newV = node.value.map(|v| f(v));
-            node.value = newV;
-            for (_, val) in node.children.iter_mut() {
-                stack.push(val);
-            }
-        }
+        // let mut stack = Vec::new();
+        // stack.push(self);
+        //
+        // while let Some(mut node) = stack.pop() {
+        //     let newV = node.value.map(|v| f(v));
+        //     node.value = newV;
+        //     for (_, val) in node.children.iter_mut() {
+        //         stack.push(val);
+        //     }
+        // }
     }
     pub fn remove<'a, I>(&mut self, key: I)
         where I: IntoIterator<Item = &'a K>
     {
         // let mut node = self;
         // for c in key {
-        //     let tmp = node;
-        //     if let Occupied(mut v) = tmp.entry(c.clone()) {
+        //     // let tmp = node;
+        //     if let Occupied(mut v) = node.children.entry(c.clone()) {
         //         if let Some(t) = v.get_mut().remove_k(&c) {
-        //
+        //             node = &mut t;
         //         } else {
         //             break;
         //         }
@@ -143,9 +142,9 @@ mod tests {
     #[test]
     fn test_contains() {
         let trie = build_trie();
-        assert!(trie.contains_prefix(&"f".chars().collect::<Vec<char>>()));
-        assert!(trie.contains_prefix(&"fi".chars().collect::<Vec<char>>()));
-        assert!(trie.contains_prefix(&"first".chars().collect::<Vec<char>>()));
+        assert!(trie.contains_prefix(&['f', 'i']));
+        assert!(trie.contains_prefix(&['a']));
+        assert!(trie.contains_prefix(&['f', 'i', 'r', 's', 't']));
     }
     #[test]
     fn test_raw_insert() {
