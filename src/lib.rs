@@ -3,18 +3,55 @@ use std::hash::Hash;
 use std::collections::hash_map::Entry::{Vacant, Occupied};
 use std::fmt::Debug;
 
-#[derive(Clone)]
+/// A Trie is a tree where each vertex represents a single word or a prefix.
+/// in such a way that searching for a string prefix is O(mn) with space O(mn)
+/// This Trie implementation tries (no pun intended) to be as generic as possible
+/// in what kinds of keys it can accept. Therefore the insert methods take anything
+/// that can be iterated over, and the Trie will create a new Trie at each key
+/// indexed by that iteratable.
+///
+/// Existing Trie implementations on cargo were abandoned and would not compile under
+/// the latest stable rustc. So I wrote this one from scratch, influenced slightly from
+/// the other implementations.
+///
+/// here's an example of an insert, using either a slice of chars or collecting
+/// a string into a slice:
+/// ```
+/// let mut trie: Trie<char, u8> = Trie::new();
+/// trie.insert(&['a', 'b'], 20);
+/// trie.insert(&"first".chars().collect::<Vec<char>>(), 40);
+/// ```
+///
+/// and checking if the prefix exists:
+/// ```
+/// assert!(trie.contains_prefix(&['f', 'i']));
+/// ```
+///
+/// Another common thing to do with a Trie is build up a list of node which match a given
+/// prefix. This is useful for things like autocompletion.
+///
+#[derive(Eq, PartialEq, Clone)]
 pub struct Trie<K, V>
-    where V: Eq,
-          K: Eq + Hash + Clone
+    where K: Eq + Hash + Clone
 {
     pub value: Option<V>,
     pub children: HashMap<K, Trie<K, V>>,
 }
 
-impl<K, V> Trie<K, V>
-    where V: Eq,
-          K: Eq + Hash + Clone
+impl<K, V> Debug for Trie<K, V>
+    where V: Debug,
+          K: Eq + Hash + Clone + Debug
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(fmt,
+               "Trie {{ children: {:?}, value: {:?} }}",
+               self.children,
+               self.value)
+    }
+}
+
+impl<'key, K, V> Trie<K, V>
+    where K: 'key + Eq + Hash + Clone
 {
     pub fn new() -> Trie<K, V> {
         Trie {
@@ -25,26 +62,10 @@ impl<K, V> Trie<K, V>
     pub fn with_value(self, v: Option<V>) -> Trie<K, V> {
         Trie { value: v, ..self }
     }
-}
-
-impl<K, V> Debug for Trie<K, V>
-    where V: Eq + Debug,
-          K: Eq + Hash + Clone + Debug
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f,
-               "Trie {{ \n \tchildren: {:?}, \n \tvalue: {:?} \n }}",
-               self.children,
-               self.value)
-    }
-}
-
-impl<K, V> Trie<K, V>
-    where V: Eq + Clone,
-          K: 'static + Eq + Hash + Clone
-{
-    pub fn insert<'a, I>(&mut self, iter: I, value: V)
-        where I: IntoIterator<Item = &'a K>
+    /// inserts something iteratable and a value into the Trie
+    /// if that sequence already exists the value will be replaced with the new one
+    pub fn insert<I>(&mut self, iter: I, value: V)
+        where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
         for c in iter.into_iter() {
@@ -53,9 +74,10 @@ impl<K, V> Trie<K, V>
         }
         node.value = Some(value);
     }
-
-    pub fn insert_fold<'a, I>(&mut self, iter: I, value: V)
-        where I: IntoIterator<Item = &'a K>
+    /// Inserts using a fold operation over the iterator passed to it
+    /// may possibly be faster than regular insert.
+    pub fn insert_fold<I>(&mut self, iter: I, value: V)
+        where I: IntoIterator<Item = &'key K>
     {
         let node = iter.into_iter().fold(self, |cur_node, c| {
             match cur_node.children.entry(c.clone()) {
@@ -65,12 +87,13 @@ impl<K, V> Trie<K, V>
         });
         node.value = Some(value);
     }
-
-    pub fn insert_raw<'a, I>(&mut self, iter: I, value: V)
-        where I: IntoIterator<Item = &'a K>
+    /// inserts using an unsafe pointer. Specifically, a raw ptr is used to move
+    /// through the tree, this may be faster than the other insert functions.
+    pub fn insert_raw<I>(&mut self, iter: I, value: V)
+        where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
-        let mut raw_ptr: *mut Trie<K, V>; // node as *mut Trie<K, V>;
+        let mut raw_ptr: *mut Trie<K, V>; // = node as *mut Trie<K, V>;
         for c in iter.into_iter() {
             raw_ptr = node.children.entry(c.clone()).or_insert_with(Trie::new);
             unsafe {
@@ -79,11 +102,11 @@ impl<K, V> Trie<K, V>
         }
         node.value = Some(value);
     }
-    pub fn contains_prefix<'a, I>(&self, key: I) -> bool
-        where I: IntoIterator<Item = &'a K>
+    pub fn contains_prefix<I>(&self, iter: I) -> bool
+        where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
-        for c in key.into_iter() {
+        for c in iter.into_iter() {
             if !node.children.contains_key(c) {
                 return false;
             }
@@ -91,22 +114,14 @@ impl<K, V> Trie<K, V>
         }
         true
     }
-    pub fn map<'a, F, U>(&mut self, f: F)
-        where F: Fn(V) -> V
-    {
-        // let mut stack = Vec::new();
-        // stack.push(self);
-        //
-        // while let Some(mut node) = stack.pop() {
-        //     let newV = node.value.map(|v| f(v));
-        //     node.value = newV;
-        //     for (_, val) in node.children.iter_mut() {
-        //         stack.push(val);
-        //     }
-        // }
+    /// Returns true if value is None and chilren is also empty.
+    pub fn is_empty(&self) -> bool {
+        self.value.is_none() && self.children.is_empty()
     }
-    pub fn remove<'a, I>(&mut self, key: I)
-        where I: IntoIterator<Item = &'a K>
+    pub fn len(&self) -> usize {}
+    pub fn count_prefixes(&self) -> usize {}
+    pub fn remove<I>(&mut self, iter: I)
+        where I: IntoIterator<Item = &'key K>
     {
         // let mut node = self;
         // for c in key {
@@ -145,6 +160,7 @@ mod tests {
         assert!(trie.contains_prefix(&['f', 'i']));
         assert!(trie.contains_prefix(&['a']));
         assert!(trie.contains_prefix(&['f', 'i', 'r', 's', 't']));
+        println!("{:?}", trie);
     }
     #[test]
     fn test_raw_insert() {
