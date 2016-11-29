@@ -30,18 +30,21 @@ use std::fmt::Debug;
 /// Another common thing to do with a Trie is build up a list of node which match a given
 /// prefix. This is useful for things like autocompletion.
 ///
+pub trait Key: Eq + Hash + Clone + Debug {}
+pub trait Value: Debug {}
+
 #[derive(Eq, PartialEq, Clone)]
 pub struct Trie<K, V>
-    where K: Eq + Hash + Clone,
-          V: Debug
+    where K: Key,
+          V: Value
 {
     pub value: Option<V>,
     pub children: HashMap<K, Trie<K, V>>,
 }
 
 impl<K, V> Debug for Trie<K, V>
-    where V: Debug,
-          K: Eq + Hash + Clone + Debug
+    where V: Value,
+          K: Key
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(fmt,
@@ -52,8 +55,8 @@ impl<K, V> Debug for Trie<K, V>
 }
 
 impl<'key, K, V> Trie<K, V>
-    where K: 'key + Eq + Hash + Clone + Debug,
-          V: Debug
+    where K: 'key + Key,
+          V: Value
 {
     pub fn new() -> Trie<K, V> {
         Trie {
