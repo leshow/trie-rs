@@ -124,7 +124,7 @@ impl<'key, K, V> Trie<K, V>
         self.value.is_none() && self.children.is_empty()
     }
     /// returns the node at a given position as defined by the iterable passed.
-    pub fn node_at<I>(&self, iter: I) -> Option<&Trie<K, V>>
+    pub fn node_as_ref<I>(&self, iter: I) -> Option<&Trie<K, V>>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
@@ -132,13 +132,26 @@ impl<'key, K, V> Trie<K, V>
             if !node.children.contains_key(&c) {
                 return None;
             }
-            std::mem::replace(&mut node, node.children.get(&c).unwrap());
+            node = node.children.get(&c).unwrap();
+        }
+        Some(node)
+    }
+    pub fn node_as_mut(&mut self, iter: I) -> Option<&mut Trie<K, V>>
+        where I: IntoIterator<Item = &'key K>
+    {
+        let mut node = self;
+        for c in iter.into_iter() {
+            if let Some(next) = node.children.get_mut(&c) {
+                node = next;
+            } else {
+                return None;
+            }
         }
         Some(node)
     }
     /// if iter is in the Trie, return a Vec of the
     pub fn list_children<'a>(&'a self, iter: &[K]) -> Option<Vec<Vec<K>>> {
-        self.node_at(iter).and_then(|t| {
+        self.node_as_ref(iter).and_then(|t| {
             let mut ret = Vec::new();
 
             let mut node = t;
