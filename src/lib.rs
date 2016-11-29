@@ -145,14 +145,12 @@ impl<'key, K, V> Trie<K, V>
                 item.push(k.clone());
 
                 if let Some(tt) = t.children.get(&k) {
-                    println!("{:?}", tt);
                     std::mem::replace(&mut node, tt);
                     if let Some(x) = self.list_children(&item) {
                         ret.extend_from_slice(&x);
                     }
                     ret.push(item);
                 }
-
             }
             Some(ret)
         })
@@ -208,7 +206,14 @@ mod tests {
     #[test]
     fn test_get_children() {
         let trie = build_trie();
-        println!("{:?}", trie.list_children(&['f', 'i']));
+
+        let mut res = Vec::new();
+        res.push(vec!['f', 'i', 'r', 's', 't']);
+
+        assert_eq!(Some(res), trie.list_children(&['f', 'i', 'r', 's']));
+
+        assert_eq!(None, trie.list_children(&['a', 'b', 'c']));
+        assert_eq!(None, trie.list_children(&['x']));
     }
 
 }
