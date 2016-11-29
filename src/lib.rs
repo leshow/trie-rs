@@ -134,27 +134,25 @@ impl<'key, K, V> Trie<K, V>
         Some(node)
     }
     /// if iter is in the Trie, return a Vec of the
-    pub fn all_from_prefix<'a: 'key, I>(&'a self, iter: I) -> Option<Vec<Vec<&'key K>>>
-        where I: IntoIterator<Item = &'key K> + Clone
-    {
-        let prefix = iter.clone().into_iter().collect::<Vec<&K>>();
+    pub fn list_children<'a>(&'a self, iter: &[K]) -> Option<Vec<Vec<K>>> {
         self.node_at(iter).and_then(move |t| {
             let mut ret = Vec::new();
 
             let mut node = t;
             for k in node.children.keys() {
-                let mut item = Vec::with_capacity(prefix.len() + 1);
-                item.extend_from_slice(&prefix);
-                item.push(&k);
+                let mut item = Vec::with_capacity(iter.len() + 1);
+                item.extend_from_slice(&iter);
+                item.push(k.clone());
 
                 if let Some(tt) = t.children.get(&k) {
                     println!("{:?}", tt);
                     std::mem::replace(&mut node, tt);
-                    if let Some(x) = self.all_from_prefix(item.clone()) {
+                    if let Some(x) = self.list_children(&item) {
                         ret.extend_from_slice(&x);
                     }
+                    ret.push(item);
                 }
-                ret.push(item);
+
             }
             Some(ret)
         })
@@ -210,7 +208,7 @@ mod tests {
     #[test]
     fn test_get_children() {
         let trie = build_trie();
-        println!("{:?}", trie.collect_next(&['f', 'i']));
+        println!("{:?}", trie.list_children(&['f', 'i']));
     }
 
 }
