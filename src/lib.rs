@@ -158,23 +158,6 @@ impl<'key, K, V> Trie<K, V>
             }
             Some(ret)
         })
-        // let mut ret = Vec::new();
-        // if let Some(mut node) = self.node_at(iter) {
-        //     for k in node.children.keys() {
-        //         let mut item = Vec::with_capacity(prefix.len() + 1);
-        //         item.extend_from_slice(&prefix);
-        //         item.push(&k);
-        //
-        //         if let Some(tt) = node.children.get(&k) {
-        //             println!("{:?}", tt);
-        //             node = tt;
-        //             let x = node.collect_next(item);
-        //             ret.extend_from_slice(&x);
-        //         }
-        //         // ret.push(item);
-        //     }
-        // }
-        // ret
     }
     pub fn remove<I>(&mut self, iter: I)
         where I: IntoIterator<Item = &'key K>
