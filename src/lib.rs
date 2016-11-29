@@ -8,7 +8,7 @@ use std::fmt::Debug;
 /// This Trie implementation tries (no pun intended) to be as generic as possible
 /// in what kinds of keys it can accept. Therefore the insert methods take anything
 /// that can be iterated over, and the Trie will create a new Trie at each key
-/// indexed by that iteratable.
+/// indexed by that iterable.
 ///
 /// Existing Trie implementations on cargo were abandoned and would not compile under
 /// the latest stable rustc. So I wrote this one from scratch, influenced slightly from
@@ -32,7 +32,8 @@ use std::fmt::Debug;
 ///
 #[derive(Eq, PartialEq, Clone)]
 pub struct Trie<K, V>
-    where K: Eq + Hash + Clone
+    where K: Eq + Hash + Clone,
+          V: Debug
 {
     pub value: Option<V>,
     pub children: HashMap<K, Trie<K, V>>,
@@ -44,14 +45,15 @@ impl<K, V> Debug for Trie<K, V>
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(fmt,
-               "Trie {{ children: {:?}, value: {:?} }}",
+               "Trie {{ children: {:?}, value: {:?} }} \n",
                self.children,
                self.value)
     }
 }
 
 impl<'key, K, V> Trie<K, V>
-    where K: 'key + Eq + Hash + Clone
+    where K: 'key + Eq + Hash + Clone + Debug,
+          V: Debug
 {
     pub fn new() -> Trie<K, V> {
         Trie {
@@ -118,8 +120,62 @@ impl<'key, K, V> Trie<K, V>
     pub fn is_empty(&self) -> bool {
         self.value.is_none() && self.children.is_empty()
     }
-    pub fn len(&self) -> usize {}
-    pub fn count_prefixes(&self) -> usize {}
+    /// returns the node at a given position as defined by the iterable passed.
+    pub fn node_at<I>(&self, iter: I) -> Option<&Trie<K, V>>
+        where I: IntoIterator<Item = &'key K>
+    {
+        let mut node = self;
+        for c in iter.into_iter() {
+            if !node.children.contains_key(&c) {
+                return None;
+            }
+            std::mem::replace(&mut node, node.children.get(&c).unwrap());
+        }
+        Some(node)
+    }
+    /// if iter is in the Trie, return a Vec of the
+    pub fn all_from_prefix<'a: 'key, I>(&'a self, iter: I) -> Option<Vec<Vec<&'key K>>>
+        where I: IntoIterator<Item = &'key K> + Clone
+    {
+        let prefix = iter.clone().into_iter().collect::<Vec<&K>>();
+        self.node_at(iter).and_then(move |t| {
+            let mut ret = Vec::new();
+
+            let mut node = t;
+            for k in node.children.keys() {
+                let mut item = Vec::with_capacity(prefix.len() + 1);
+                item.extend_from_slice(&prefix);
+                item.push(&k);
+
+                if let Some(tt) = t.children.get(&k) {
+                    println!("{:?}", tt);
+                    std::mem::replace(&mut node, tt);
+                    if let Some(x) = self.all_from_prefix(item.clone()) {
+                        ret.extend_from_slice(&x);
+                    }
+                }
+                ret.push(item);
+            }
+            Some(ret)
+        })
+        // let mut ret = Vec::new();
+        // if let Some(mut node) = self.node_at(iter) {
+        //     for k in node.children.keys() {
+        //         let mut item = Vec::with_capacity(prefix.len() + 1);
+        //         item.extend_from_slice(&prefix);
+        //         item.push(&k);
+        //
+        //         if let Some(tt) = node.children.get(&k) {
+        //             println!("{:?}", tt);
+        //             node = tt;
+        //             let x = node.collect_next(item);
+        //             ret.extend_from_slice(&x);
+        //         }
+        //         // ret.push(item);
+        //     }
+        // }
+        // ret
+    }
     pub fn remove<I>(&mut self, iter: I)
         where I: IntoIterator<Item = &'key K>
     {
@@ -160,7 +216,6 @@ mod tests {
         assert!(trie.contains_prefix(&['f', 'i']));
         assert!(trie.contains_prefix(&['a']));
         assert!(trie.contains_prefix(&['f', 'i', 'r', 's', 't']));
-        println!("{:?}", trie);
     }
     #[test]
     fn test_raw_insert() {
@@ -168,6 +223,11 @@ mod tests {
         trie.insert_raw(&"first".chars().collect::<Vec<char>>(), 40);
         trie.insert_raw(&"fibonnaci".chars().collect::<Vec<char>>(), 40);
         assert!(trie.contains_prefix(&"fibonn".chars().collect::<Vec<char>>()));
+    }
+    #[test]
+    fn test_get_children() {
+        let trie = build_trie();
+        println!("{:?}", trie.collect_next(&['f', 'i']));
     }
 
 }
