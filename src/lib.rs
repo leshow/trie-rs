@@ -136,12 +136,13 @@ impl<'key, K, V> Trie<K, V>
         }
         Some(node)
     }
-    pub fn node_as_mut(&mut self, iter: I) -> Option<&mut Trie<K, V>>
+    pub fn node_as_mut<I>(&mut self, iter: I) -> Option<&mut Trie<K, V>>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
         for c in iter.into_iter() {
-            if let Some(next) = node.children.get_mut(&c) {
+            let tmp = node;
+            if let Some(next) = tmp.children.get_mut(&c) {
                 node = next;
             } else {
                 return None;
