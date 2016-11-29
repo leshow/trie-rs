@@ -135,7 +135,7 @@ impl<'key, K, V> Trie<K, V>
     }
     /// if iter is in the Trie, return a Vec of the
     pub fn list_children<'a>(&'a self, iter: &[K]) -> Option<Vec<Vec<K>>> {
-        self.node_at(iter).and_then(move |t| {
+        self.node_at(iter).and_then(|t| {
             let mut ret = Vec::new();
 
             let mut node = t;
