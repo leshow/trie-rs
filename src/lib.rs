@@ -124,7 +124,7 @@ impl<'key, K, V> Trie<K, V>
         self.value.is_none() && self.children.is_empty()
     }
     /// returns the node at a given position as defined by the iterable passed.
-    pub fn node_as_ref<I>(&self, iter: I) -> Option<&Trie<K, V>>
+    pub fn get_node_ref<I>(&self, iter: I) -> Option<&Trie<K, V>>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
@@ -136,7 +136,7 @@ impl<'key, K, V> Trie<K, V>
         }
         Some(node)
     }
-    pub fn node_as_mut<I>(&mut self, iter: I) -> Option<&mut Trie<K, V>>
+    pub fn get_node_mut<I>(&mut self, iter: I) -> Option<&mut Trie<K, V>>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
@@ -152,10 +152,10 @@ impl<'key, K, V> Trie<K, V>
     }
     /// if iter is in the Trie, return a Vec of the
     pub fn list_children<'a>(&'a self, iter: &[K]) -> Option<Vec<Vec<K>>> {
-        self.node_as_ref(iter).and_then(|t| {
+        self.get_node_ref(iter).and_then(|t| {
             let mut ret = Vec::new();
-
             let mut node = t;
+
             for k in node.children.keys() {
                 let mut item = Vec::with_capacity(iter.len() + 1);
                 item.extend_from_slice(&iter);
@@ -172,25 +172,41 @@ impl<'key, K, V> Trie<K, V>
             Some(ret)
         })
     }
-    pub fn remove<I>(&mut self, iter: I)
+    // pub fn remove<I>(&mut self, iter: I)
+    //     where I: IntoIterator<Item = &'key K>
+    // {
+    //     let mut node = self;
+    //     for c in iter.into_iter() {
+    //         let tmp = node;
+    //         // if let Occupied(mut entry) = tmp.children.entry(c.clone()) {
+    //         //     // entry.get_mut().remove(iter);
+    //         //     entry.remove();
+    //         //     node = entry;
+    //         // }
+    //         if let Some(next) = tmp.children.remove(&c) {
+    //             node = &mut next;
+    //         }
+    //     }
+    //
+    // }
+    pub fn remove<I>(&mut self, iter: I) -> bool
         where I: IntoIterator<Item = &'key K>
     {
-        // let mut node = self;
-        // for c in key {
-        //     // let tmp = node;
-        //     if let Occupied(mut v) = node.children.entry(c.clone()) {
-        //         if let Some(t) = v.get_mut().remove_k(&c) {
-        //             node = &mut t;
-        //         } else {
-        //             break;
-        //         }
-        //     } else {
-        //         break;
-        //     }
-        // }
-    }
-    fn remove_k(&mut self, c: &K) -> Option<Trie<K, V>> {
-        self.children.remove(c)
+        let mut prefix = iter.into_iter();
+        match prefix.next() {
+            None => {
+                self.value = None;
+            }
+            Some(c) => {
+                if let Occupied(mut entry) = self.children.entry(c.clone()) {
+                    let delete_child = entry.get_mut().remove(prefix);
+                    if delete_child {
+                        entry.remove();
+                    }
+                }
+            }
+        }
+        self.is_empty()
     }
 }
 
