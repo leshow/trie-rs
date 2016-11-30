@@ -134,10 +134,10 @@ impl<'key, K, V> Trie<K, V>
     {
         let mut node = self;
         for c in iter.into_iter() {
-            if !node.children.contains_key(&c) {
-                return None;
+            match node.children.get(&c) {
+                Some(next) => node = next,
+                None => return None,
             }
-            node = node.children.get(&c).unwrap();
         }
         Some(node)
     }
@@ -147,10 +147,9 @@ impl<'key, K, V> Trie<K, V>
         let mut node = self;
         for c in iter.into_iter() {
             let tmp = node;
-            if let Some(next) = tmp.children.get_mut(&c) {
-                node = next;
-            } else {
-                return None;
+            match tmp.children.get_mut(&c) {
+                Some(next) => node = next,
+                None => return None,
             }
         }
         Some(node)
