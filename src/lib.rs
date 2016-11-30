@@ -30,8 +30,13 @@ use std::fmt::Debug;
 /// Another common thing to do with a Trie is build up a list of node which match a given
 /// prefix. This is useful for things like autocompletion.
 ///
+
+/// for Keys
 pub trait Key: Eq + Hash + Clone + Debug {}
+impl<K> Key for K where K: 'static + PartialEq + Eq + Hash + Clone + Debug {}
+/// for Values
 pub trait Value: Debug {}
+impl<V> Value for V where V: Debug {}
 
 #[derive(Eq, PartialEq, Clone)]
 pub struct Trie<K, V>
@@ -237,7 +242,7 @@ mod tests {
         assert!(trie.contains_prefix(&"fibonn".chars().collect::<Vec<char>>()));
     }
     #[test]
-    fn test_get_children() {
+    fn test_list_children() {
         let trie = build_trie();
 
         let mut res = Vec::new();
@@ -247,6 +252,17 @@ mod tests {
 
         assert_eq!(None, trie.list_children(&['a', 'b', 'c']));
         assert_eq!(None, trie.list_children(&['x']));
+    }
+    #[test]
+    fn test_remove() {
+        let mut trie = build_trie();
+        trie.remove(&['f', 'i', 'r', 's', 't']);
+
+        let mut eq: Trie<char, u8> = Trie::new();
+        eq.insert(&['a', 'b'], 20);
+        eq.insert(&"fibonnaci".chars().collect::<Vec<char>>(), 40);
+
+        assert_eq!(eq, trie);
     }
 
 }
