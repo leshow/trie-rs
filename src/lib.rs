@@ -78,7 +78,7 @@ impl<'key, K, V> Trie<K, V>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
-        for c in iter.into_iter() {
+        for c in iter {
             let tmp = node;
             node = tmp.children.entry(c.clone()).or_insert_with(Trie::new);
         }
@@ -104,7 +104,7 @@ impl<'key, K, V> Trie<K, V>
     {
         let mut node = self;
         let mut raw_ptr: *mut Trie<K, V>; // = node as *mut Trie<K, V>;
-        for c in iter.into_iter() {
+        for c in iter {
             raw_ptr = node.children.entry(c.clone()).or_insert_with(Trie::new);
             unsafe {
                 node = &mut *raw_ptr;
@@ -116,11 +116,11 @@ impl<'key, K, V> Trie<K, V>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
-        for c in iter.into_iter() {
+        for c in iter {
             if !node.children.contains_key(c) {
                 return false;
             }
-            std::mem::replace(&mut node, node.children.get(&c).unwrap());
+            std::mem::replace(&mut node, &node.children[c]); // node.children().get(c).unwrap()
         }
         true
     }
@@ -133,8 +133,8 @@ impl<'key, K, V> Trie<K, V>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
-        for c in iter.into_iter() {
-            match node.children.get(&c) {
+        for c in iter {
+            match node.children.get(c) {
                 Some(next) => node = next,
                 None => return None,
             }
@@ -145,9 +145,9 @@ impl<'key, K, V> Trie<K, V>
         where I: IntoIterator<Item = &'key K>
     {
         let mut node = self;
-        for c in iter.into_iter() {
+        for c in iter {
             let tmp = node;
-            match tmp.children.get_mut(&c) {
+            match tmp.children.get_mut(c) {
                 Some(next) => node = next,
                 None => return None,
             }
@@ -155,17 +155,17 @@ impl<'key, K, V> Trie<K, V>
         Some(node)
     }
     /// if iter is in the Trie, return a Vec of the
-    pub fn list_children<'a>(&'a self, iter: &[K]) -> Option<Vec<Vec<K>>> {
+    pub fn list_children(&self, iter: &[K]) -> Option<Vec<Vec<K>>> {
         self.get_node_ref(iter).and_then(|t| {
             let mut ret = Vec::new();
             let mut node = t;
 
             for k in node.children.keys() {
                 let mut item = Vec::with_capacity(iter.len() + 1);
-                item.extend_from_slice(&iter);
+                item.extend_from_slice(iter);
                 item.push(k.clone());
 
-                if let Some(tt) = t.children.get(&k) {
+                if let Some(tt) = t.children.get(k) {
                     std::mem::replace(&mut node, tt);
                     if let Some(x) = self.list_children(&item) {
                         ret.extend_from_slice(&x);
