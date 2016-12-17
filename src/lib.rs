@@ -38,25 +38,13 @@ impl<K> Key for K where K: 'static + PartialEq + Eq + Hash + Clone + Debug {}
 pub trait Value: Debug {}
 impl<V> Value for V where V: Debug {}
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Trie<K, V>
     where K: Key,
           V: Value
 {
     pub value: Option<V>,
     pub children: HashMap<K, Trie<K, V>>,
-}
-
-impl<K, V> Debug for Trie<K, V>
-    where V: Value,
-          K: Key
-{
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(fmt,
-               "Trie {{ children: {:?}, value: {:?} }} \n",
-               self.children,
-               self.value)
-    }
 }
 
 impl<'key, K, V> Trie<K, V>
@@ -229,6 +217,8 @@ mod tests {
     #[test]
     fn test_contains() {
         let trie = build_trie();
+        println!("{:#?}", trie); // pretty print trie
+
         assert!(trie.contains_prefix(&['f', 'i']));
         assert!(trie.contains_prefix(&['a']));
         assert!(trie.contains_prefix(&['f', 'i', 'r', 's', 't']));
