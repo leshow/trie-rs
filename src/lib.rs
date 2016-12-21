@@ -1,3 +1,7 @@
+#![feature(test)]
+
+extern crate test;
+
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::collections::hash_map::Entry::{Vacant, Occupied};
@@ -33,7 +37,7 @@ use std::fmt::Debug;
 
 /// for Keys
 pub trait Key: Eq + Hash + Clone + Debug {}
-impl<K> Key for K where K: 'static + PartialEq + Eq + Hash + Clone + Debug {}
+impl<K> Key for K where K: Eq + Hash + Clone + Debug {}
 /// for Values
 pub trait Value: Debug {}
 impl<V> Value for V where V: Debug {}
@@ -205,7 +209,7 @@ impl<'key, K, V> Trie<K, V>
 
 #[cfg(test)]
 mod tests {
-    use super::Trie;
+    use super::{Trie, test};
 
     fn build_trie() -> Trie<char, u8> {
         let mut trie: Trie<char, u8> = Trie::new();
@@ -253,5 +257,37 @@ mod tests {
 
         assert_eq!(eq, trie);
     }
+    /// in this (albeit extremely poor) benchmark, unsafe insert performs only very marginally
+    /// better than a regular insert. Both insert and insert_fold seem to perform exactly the same
+    /// which leads me to believe the compiler probably unrolls them into very similar assembly
+    #[bench]
+    fn bench_insert_unsafe(b: &mut test::Bencher) {
+        let mut trie = Trie::new();
 
+        b.iter(|| {
+            trie.insert_raw(&['a', 'b'], 10);
+            trie.insert_raw(&['a', 'b', 'c'], 10);
+            trie.insert_raw(&['z', 't', 'q'], 10);
+        });
+    }
+    #[bench]
+    fn bench_insert(b: &mut test::Bencher) {
+        let mut trie = Trie::new();
+
+        b.iter(|| {
+            trie.insert(&['a', 'b'], 10);
+            trie.insert(&['a', 'b', 'c'], 10);
+            trie.insert(&['z', 't', 'q'], 10);
+        });
+    }
+    #[bench]
+    fn bench_insert_fold(b: &mut test::Bencher) {
+        let mut trie = Trie::new();
+
+        b.iter(|| {
+            trie.insert_fold(&['a', 'b'], 10);
+            trie.insert_fold(&['a', 'b', 'c'], 10);
+            trie.insert_fold(&['z', 't', 'q'], 10);
+        });
+    }
 }
