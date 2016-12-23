@@ -51,6 +51,26 @@ pub struct Trie<K, V>
     pub children: HashMap<K, Trie<K, V>>,
 }
 
+pub struct TrieIter<K, V>
+    where K: Key,
+          V: Value
+{
+    prefix: Trie<K, V>,
+    cur_key: K,
+    cur_val: Option<V>,
+    stack: Vec<HashMap<K, Trie<K, V>>>,
+}
+
+impl<K, V> Iterator for TrieIter<K, V>
+    where K: Key,
+          V: Value
+{
+    type Item = Trie<K, V>;
+    fn next(&mut self) -> Option<Trie<K, V>> {
+        unimplemented!();
+    }
+}
+
 impl<'key, K, V> Trie<K, V>
     where K: 'key + Key,
           V: Value
