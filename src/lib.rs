@@ -1,6 +1,6 @@
-#![feature(test)]
+// #![feature(test)]
 
-extern crate test;
+// extern crate test;
 
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -51,17 +51,16 @@ pub struct Trie<K, V>
     pub children: HashMap<K, Trie<K, V>>,
 }
 
-pub struct TrieIter<K, V>
+pub struct TrieIterator<K, V>
     where K: Key,
           V: Value
 {
-    prefix: Trie<K, V>,
-    cur_key: K,
-    cur_val: Option<V>,
+    prefix: Vec<K>,
+    cur: Trie<K, V>,
     stack: Vec<HashMap<K, Trie<K, V>>>,
 }
 
-impl<K, V> Iterator for TrieIter<K, V>
+impl<K, V> Iterator for TrieIterator<K, V>
     where K: Key,
           V: Value
 {
