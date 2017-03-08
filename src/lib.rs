@@ -100,12 +100,11 @@ impl<'key, K, V> Trie<K, V>
     pub fn insert_fold<I>(&mut self, iter: I, value: V)
         where I: IntoIterator<Item = &'key K>
     {
-        let node = iter.into_iter().fold(self, |cur_node, c| {
-            match cur_node.children.entry(c.clone()) {
-                Vacant(v) => v.insert(Trie::new()),
-                Occupied(v) => v.into_mut(),
-            }
-        });
+        let node = iter.into_iter().fold(self,
+                                         |cur_node, c| match cur_node.children.entry(c.clone()) {
+                                             Vacant(v) => v.insert(Trie::new()),
+                                             Occupied(v) => v.into_mut(),
+                                         });
         node.value = Some(value);
     }
     /// inserts using an unsafe pointer. Specifically, a raw ptr is used to move
