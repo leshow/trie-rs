@@ -11,7 +11,6 @@ use std::{
     },
     hash::Hash,
     iter::FromIterator,
-    marker::PhantomData,
     ptr::NonNull,
 };
 
@@ -135,8 +134,8 @@ where
         Iter {
             prefix: Vec::new(),
             started: false,
-            root: self,
-            stack: vec![],
+            node: self,
+            stack: Vec::new(),
         }
     }
 }
@@ -147,19 +146,28 @@ impl<V> Trie<char, V> {
     }
 }
 
-// impl<V, Q> Trie<&Q, V> {
-//     pub fn insert_bytes<'a, S: AsRef<[Q]> + 'a>(&mut self, prefix: S, value: V)
-//     where
-//         Q: Borrow<u8> + Eq + Hash,
-//     {
-//         self.insert::<&Q, _>(prefix.as_ref(), value)
-//     }
-// }
+impl<V> Trie<u8, V> {
+    pub fn insert_bytes<S>(&mut self, prefix: S, value: V)
+    where
+        S: AsRef<[u8]>,
+    {
+        self.insert(prefix.as_ref().into_iter().cloned(), value)
+    }
+}
+
+impl<'b, V> Trie<&'b u8, V> {
+    pub fn insert_byte_ref<'a: 'b, S>(&mut self, prefix: &'a S, value: V)
+    where
+        S: AsRef<[u8]>,
+    {
+        self.insert::<&u8, _>(prefix.as_ref(), value)
+    }
+}
 
 pub struct Iter<'a, K, V> {
     prefix: Vec<&'a K>,
     started: bool,
-    root: &'a Trie<K, V>,
+    node: &'a Trie<K, V>,
     stack: Vec<hash_map::Iter<'a, K, Trie<K, V>>>,
 }
 
@@ -172,7 +180,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         if !self.started {
             self.started = true;
-            self.stack.push(self.root.children.iter());
+            self.stack.push(self.node.children.iter());
         }
         loop {
             match self.stack.last_mut() {
@@ -195,15 +203,16 @@ where
     }
 }
 
-// impl<K, V> IntoIterator for Trie<K, V> where K: Eq+Hash{
-//     type Item = (K, V);
-//     type IntoIter =IntoIter<K, V>;
-
-//     fn into_iter(self) -> IntoIter<K, V> {
-//        self.into_iter()
-//     }
-
-// }
+impl<'a, K, V> IntoIterator for &'a Trie<K, V>
+where
+    K: Eq + Hash,
+{
+    type Item = (Vec<&'a K>, &'a V);
+    type IntoIter = Iter<'a, K, V>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -226,11 +235,22 @@ mod tests {
     // }
 
     #[test]
+    fn test_bytes_iter() {
+        let mut trie = Trie::new();
+        trie.insert_bytes(b"stuff", 1);
+        trie.insert_bytes(b"staff", 2);
+        trie.insert_bytes(b"stack", 3);
+
+        for stuff in trie.iter() {
+            println!("{:?}", stuff);
+        }
+    }
+    #[test]
     fn test_iter() {
         let mut trie = Trie::new();
-        trie.insert::<&u8, _>(b"stuff", 1);
-        trie.insert::<&u8, _>(b"staff", 2);
-        trie.insert::<&u8, _>(b"stack", 3);
+        trie.insert_byte_ref(b"stuff", 1);
+        trie.insert_byte_ref(b"staff", 2);
+        trie.insert_byte_ref(b"stack", 3);
 
         for stuff in trie.iter() {
             println!("{:?}", stuff);
