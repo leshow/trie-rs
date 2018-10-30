@@ -139,25 +139,47 @@ where
         }
     }
 
-    // pub fn other_iter(&'_ self) -> OtherIter<'_, K, V> {
-    //     OtherIter {
-    //         prefix: Vec::new(),
-    //         started: false,
-    //         node: self,
-    //         stack: Vec::new(),
-    //     }
-    // }
-}
-pub struct OtherIter<'a, K, V> {
-    prefix: Vec<&'a K>,
-    started: bool,
-    node: &'a Trie<K, V>,
-    stack: VecDeque<*mut Trie<K, V>>,
+    pub fn other_iter(&'_ self) -> OtherIter<'_, K, V> {
+        let mut queue = VecDeque::new();
+        let ptr = self as *const _ as *mut _;
+        queue.push_front(ptr);
+        OtherIter {
+            prefix: Vec::new(),
+            node: self,
+            queue,
+        }
+    }
 }
 
-// impl<'a, K, V> Iterator for OtherIter<'a, K, V> {
-//     type Item = (Vec<)
-// }
+pub struct OtherIter<'a, K, V> {
+    prefix: Vec<&'a K>,
+    node: &'a Trie<K, V>,
+    queue: VecDeque<*mut Trie<K, V>>,
+}
+
+impl<'a, K, V> Iterator for OtherIter<'a, K, V>
+where
+    K: Eq + Hash,
+{
+    type Item = (Vec<&'a K>, &'a V);
+    fn next(&mut self) -> Option<Self::Item> {
+        while !self.queue.is_empty() {
+            if let Some(n) = self.queue.pop_front() {
+                let node = unsafe { &*n };
+                for (k, child) in node.children.iter() {
+                    self.prefix.push(k);
+                    self.queue.push_back(child as *const _ as *mut _);
+                    if let Some(ref val) = child.value {
+                        return Some((self.prefix.clone(), &val));
+                    }
+                }
+            } else {
+                self.prefix.pop();
+            }
+        }
+        None
+    }
+}
 
 impl<V> Trie<char, V> {
     pub fn insert_str<S: AsRef<str>>(&mut self, prefix: S, value: V) {
@@ -190,6 +212,7 @@ pub struct Iter<'a, K, V> {
     stack: Vec<hash_map::Iter<'a, K, Trie<K, V>>>,
 }
 
+#[derive(Debug)]
 pub struct IterItem<'a, K, V> {
     prefix: Vec<&'a K>,
     value: &'a V,
