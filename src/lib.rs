@@ -138,7 +138,26 @@ where
             stack: Vec::new(),
         }
     }
+
+    // pub fn other_iter(&'_ self) -> OtherIter<'_, K, V> {
+    //     OtherIter {
+    //         prefix: Vec::new(),
+    //         started: false,
+    //         node: self,
+    //         stack: Vec::new(),
+    //     }
+    // }
 }
+pub struct OtherIter<'a, K, V> {
+    prefix: Vec<&'a K>,
+    started: bool,
+    node: &'a Trie<K, V>,
+    stack: VecDeque<*mut Trie<K, V>>,
+}
+
+// impl<'a, K, V> Iterator for OtherIter<'a, K, V> {
+//     type Item = (Vec<)
+// }
 
 impl<V> Trie<char, V> {
     pub fn insert_str<S: AsRef<str>>(&mut self, prefix: S, value: V) {
@@ -171,11 +190,22 @@ pub struct Iter<'a, K, V> {
     stack: Vec<hash_map::Iter<'a, K, Trie<K, V>>>,
 }
 
+pub struct IterItem<'a, K, V> {
+    prefix: Vec<&'a K>,
+    value: &'a V,
+}
+
+impl<'a, K, V> IterItem<'a, K, V> {
+    pub fn new(prefix: Vec<&'a K>, value: &'a V) -> Self {
+        IterItem { prefix, value }
+    }
+}
+
 impl<'a, K, V> Iterator for Iter<'a, K, V>
 where
     K: Eq + Hash,
 {
-    type Item = (Vec<&'a K>, &'a V);
+    type Item = IterItem<'a, K, V>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.started {
@@ -188,8 +218,8 @@ where
                     Some((k, child)) => {
                         self.stack.push(child.children.iter());
                         self.prefix.push(k);
-                        if let Some(ref v) = child.value {
-                            return Some((self.prefix.clone(), v));
+                        if let Some(ref value) = child.value {
+                            return Some(IterItem::new(self.prefix.clone(), value));
                         }
                     }
                     None => {
@@ -207,7 +237,7 @@ impl<'a, K, V> IntoIterator for &'a Trie<K, V>
 where
     K: Eq + Hash,
 {
-    type Item = (Vec<&'a K>, &'a V);
+    type Item = IterItem<'a, K, V>;
     type IntoIter = Iter<'a, K, V>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
