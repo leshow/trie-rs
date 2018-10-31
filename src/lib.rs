@@ -9,6 +9,7 @@ use std::{
         },
         HashMap, VecDeque,
     },
+    fmt::Debug,
     hash::Hash,
     iter::FromIterator,
     ptr::NonNull,
@@ -79,8 +80,7 @@ where
     {
         let mut node = self;
         for c in prefix {
-            let tmp = node;
-            match tmp.children.get(c.borrow()) {
+            match node.children.get(c.borrow()) {
                 Some(next) => node = next,
                 None => return None,
             }
@@ -98,8 +98,7 @@ where
     {
         let mut node = self;
         for c in prefix {
-            let tmp = node;
-            match tmp.children.get_mut(c.borrow()) {
+            match node.children.get_mut(c.borrow()) {
                 Some(next) => node = next,
                 None => return None,
             }
@@ -130,6 +129,62 @@ where
         None
     }
 
+    pub fn values_vec<Q: ?Sized>(&'_ self) -> Vec<&'_ V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        let mut queue = VecDeque::new();
+        queue.push_front(self);
+        let mut values = vec![];
+        while !queue.is_empty() {
+            if let Some(node) = queue.pop_front() {
+                for (_, child) in node.children.iter() {
+                    queue.push_back(child);
+                    if let Some(ref val) = child.value {
+                        values.push(val);
+                    }
+                }
+            }
+        }
+        FromIterator::from_iter(values)
+    }
+
+    pub fn values<'a, B, Q: ?Sized>(&'a self) -> B
+    where
+        B: FromIterator<&'a V>,
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        FromIterator::from_iter(self.values_vec())
+    }
+
+    pub fn values_prefix<I, Q: ?Sized>(&'_ self, prefix: I) -> Vec<&'_ V>
+    where
+        I: IntoIterator<Item = K>,
+        V: Debug,
+        K: Borrow<Q> + Debug,
+        Q: Hash + Eq,
+    {
+        let mut node = self;
+        let mut values = Vec::new();
+        for c in prefix {
+            if let Some(ref v) = node.value {
+                values.push(v);
+            }
+            match node.children.get(c.borrow()) {
+                Some(next) => node = next,
+                None => {
+                    break;
+                }
+            }
+        }
+        if let Some(ref v) = node.value {
+            values.push(v);
+        }
+        values
+    }
+
     pub fn iter(&'_ self) -> Iter<'_, K, V> {
         Iter {
             prefix: Vec::new(),
@@ -138,52 +193,32 @@ where
             stack: Vec::new(),
         }
     }
-
-    pub fn other_iter(&'_ self) -> OtherIter<'_, K, V> {
-        let mut queue = VecDeque::new();
-        let ptr = self as *const _ as *mut _;
-        queue.push_front(ptr);
-        OtherIter {
-            prefix: Vec::new(),
-            node: self,
-            queue,
-        }
-    }
-}
-
-pub struct OtherIter<'a, K, V> {
-    prefix: Vec<&'a K>,
-    node: &'a Trie<K, V>,
-    queue: VecDeque<*mut Trie<K, V>>,
-}
-
-impl<'a, K, V> Iterator for OtherIter<'a, K, V>
-where
-    K: Eq + Hash,
-{
-    type Item = (Vec<&'a K>, &'a V);
-    fn next(&mut self) -> Option<Self::Item> {
-        while !self.queue.is_empty() {
-            if let Some(n) = self.queue.pop_front() {
-                let node = unsafe { &*n };
-                for (k, child) in node.children.iter() {
-                    self.prefix.push(k);
-                    self.queue.push_back(child as *const _ as *mut _);
-                    if let Some(ref val) = child.value {
-                        return Some((self.prefix.clone(), &val));
-                    }
-                }
-            } else {
-                self.prefix.pop();
-            }
-        }
-        None
-    }
 }
 
 impl<V> Trie<char, V> {
     pub fn insert_str<S: AsRef<str>>(&mut self, prefix: S, value: V) {
         self.insert(prefix.as_ref().chars(), value)
+    }
+
+    pub fn get_ref_str<Q: ?Sized, S: AsRef<str>>(&self, prefix: S) -> Option<&Trie<char, V>>
+    where
+        Q: Hash + Eq,
+    {
+        self.get_ref(prefix.as_ref().chars())
+    }
+
+    pub fn get_mut_str<Q: ?Sized, S: AsRef<str>>(&mut self, prefix: S) -> Option<&mut Trie<char, V>>
+    where
+        Q: Hash + Eq,
+    {
+        self.get_mut(prefix.as_ref().chars())
+    }
+
+    pub fn remove_str<Q: ?Sized, S: AsRef<str>>(&mut self, prefix: S) -> Option<V>
+    where
+        Q: Hash + Eq,
+    {
+        self.remove(prefix.as_ref().chars())
     }
 }
 
@@ -194,14 +229,26 @@ impl<V> Trie<u8, V> {
     {
         self.insert(prefix.as_ref().into_iter().cloned(), value)
     }
-}
 
-impl<'b, V> Trie<&'b u8, V> {
-    pub fn insert_byte_ref<'a: 'b, S>(&mut self, prefix: &'a S, value: V)
+    pub fn get_ref_str<Q: ?Sized, S: AsRef<[u8]>>(&self, prefix: S) -> Option<&Self>
     where
-        S: AsRef<[u8]>,
+        Q: Hash + Eq,
     {
-        self.insert::<&u8, _>(prefix.as_ref(), value)
+        self.get_ref(prefix.as_ref().into_iter().cloned())
+    }
+
+    pub fn get_mut_str<Q: ?Sized, S: AsRef<[u8]>>(&mut self, prefix: S) -> Option<&mut Self>
+    where
+        Q: Hash + Eq,
+    {
+        self.get_mut(prefix.as_ref().into_iter().cloned())
+    }
+
+    pub fn remove_str<Q: ?Sized, S: AsRef<[u8]>>(&mut self, prefix: S) -> Option<V>
+    where
+        Q: Hash + Eq,
+    {
+        self.remove(prefix.as_ref().into_iter().cloned())
     }
 }
 
@@ -260,8 +307,9 @@ impl<'a, K, V> IntoIterator for &'a Trie<K, V>
 where
     K: Eq + Hash,
 {
-    type Item = IterItem<'a, K, V>;
     type IntoIter = Iter<'a, K, V>;
+    type Item = IterItem<'a, K, V>;
+
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
@@ -270,6 +318,29 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_prefix_values() {
+        let mut trie = Trie::new();
+        trie.insert("foo".chars(), 1);
+        trie.insert("foob".chars(), 2);
+        trie.insert("fooba".chars(), 3);
+        trie.insert("foobar".chars(), 4);
+        trie.insert("foobarzz".chars(), 5);
+        assert_eq!(vec![&1, &2, &3, &4], trie.values_prefix("foobar".chars()));
+    }
+
+    #[test]
+    fn test_other() {
+        let mut trie = Trie::new();
+        trie.insert("foo".chars(), 1);
+        trie.insert("foob".chars(), 2);
+        trie.insert("fooba".chars(), 3);
+        trie.insert("foobar".chars(), 4);
+        trie.insert("foobarzz".chars(), 5);
+        assert_eq!(vec![&1, &2, &3, &4, &5], trie.values_vec());
+        assert_eq!(vec![&1, &2, &3, &4, &5], trie.values::<Vec<_>, _>());
+    }
     #[test]
     fn test_insert() {
         let mut trie = Trie::new();
@@ -277,15 +348,8 @@ mod tests {
         let s = String::from("foobaz");
         trie.insert(s.chars(), "other");
         trie.insert_str("stuff", "okay");
+        assert_eq!(trie.get_mut("stuff".chars()).unwrap().value, Some("okay"));
     }
-    // #[test]
-    // fn test_insert_bytes() {
-    //     let mut trie = Trie::new();
-    //     trie.insert("foobar".chars(), "val");
-    //     let s = String::from("foobaz");
-    //     trie.insert(s.chars(), "other");
-    //     trie.insert_str("stuff", "okay");
-    // }
 
     #[test]
     fn test_bytes_iter() {
@@ -298,15 +362,5 @@ mod tests {
             println!("{:?}", stuff);
         }
     }
-    #[test]
-    fn test_iter() {
-        let mut trie = Trie::new();
-        trie.insert_byte_ref(b"stuff", 1);
-        trie.insert_byte_ref(b"staff", 2);
-        trie.insert_byte_ref(b"stack", 3);
 
-        for stuff in trie.iter() {
-            println!("{:?}", stuff);
-        }
-    }
 }
