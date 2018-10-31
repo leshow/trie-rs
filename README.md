@@ -10,6 +10,6 @@ Since wasm has been taking off, I've wanted to use a trie implemented in rust to
 
 ## crates.io
 
-Published on [crates.io](https://crates.io/trie_map)
+Published on [crates.io](https://crates.io/crates/trie_map)
 
 Evan Cameron
