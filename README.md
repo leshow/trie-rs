@@ -1,5 +1,7 @@
 # Trie
 
+[![Build Status](https://travis-ci.com/leshow/trie-rs.svg?branch=master)](https://travis-ci.com/leshow/trie-rs)
+
 **PRs are welcome**
 
 My first trie implementation was in javascript, I needed it for fast string searching in a project at work. I later refactored it, extracted it to it's own module (not available publicly) and added Flow type annotations to gain some greater confidence in the code.
