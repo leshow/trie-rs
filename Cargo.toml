@@ -2,7 +2,7 @@
 name = "trie_map"
 version = "0.1.0"
 authors = ["Evan Cameron <cameron.evan@gmail.com>"]
-# edition = "2018"
+edition = "2018"
 license = "MIT"
 description = "A trie with good iterator support backed by a hashmap"
 keywords = ["trie", "datastructures", "hashmap", "search"]
