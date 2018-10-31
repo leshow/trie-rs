@@ -12,6 +12,7 @@ use std::{
     fmt::Debug,
     hash::Hash,
     iter::FromIterator,
+    ops::{Index, IndexMut},
     ptr::NonNull,
 };
 
@@ -361,6 +362,30 @@ where
     }
 }
 
+impl<'a, K, V, P> Index<P> for Trie<K, V>
+where
+    P: IntoIterator<Item = K>,
+    K: Eq + Hash,
+{
+    type Output = Trie<K, V>;
+
+    #[inline]
+    fn index(&self, iter: P) -> &Self {
+        self.get_ref(iter).expect("prefix not found")
+    }
+}
+
+impl<'a, K, V, P> IndexMut<P> for Trie<K, V>
+where
+    P: IntoIterator<Item = K>,
+    K: Eq + Hash,
+{
+    #[inline]
+    fn index_mut(&mut self, iter: P) -> &mut Self {
+        self.get_mut(iter).expect("prefix not found")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,6 +439,13 @@ mod tests {
             .into_iter()
             .collect::<Trie<_, _>>();
         assert_eq!(trie.get_ref("stuff".chars()).unwrap().value, Some(1));
+    }
+    #[test]
+    fn test_index() {
+        let trie = vec![("stuff".chars(), 1), ("stuffx".chars(), 2)]
+            .into_iter()
+            .collect::<Trie<_, _>>();
+        assert_eq!(trie["stuff".chars()].value, Some(1));
     }
 
 }
