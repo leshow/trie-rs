@@ -130,7 +130,7 @@ where
         None
     }
 
-    pub fn values_vec<Q: ?Sized>(&'_ self) -> Vec<&'_ V>
+    pub fn values_vec<'a, Q: ?Sized>(&'a self) -> Vec<&'a V>
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -160,7 +160,7 @@ where
         FromIterator::from_iter(self.values_vec())
     }
 
-    pub fn values_prefix<I, Q: ?Sized>(&'_ self, prefix: I) -> Vec<&'_ V>
+    pub fn values_prefix<'a, I, Q: ?Sized>(&'a self, prefix: I) -> Vec<&'a V>
     where
         I: IntoIterator<Item = K>,
         V: Debug,
@@ -186,7 +186,7 @@ where
         values
     }
 
-    pub fn iter(&'_ self) -> Iter<'_, K, V> {
+    pub fn iter<'a>(&'a self) -> Iter<'a, K, V> {
         Iter {
             prefix: Vec::new(),
             started: false,
@@ -337,15 +337,27 @@ where
     }
 }
 
-impl<'a, K, V, P> Extend<(P, V)> for &'a mut Trie<K, V>
+impl<'a, K, V, P> Extend<(P, V)> for Trie<K, V>
 where
     P: IntoIterator<Item = K>,
     K: Eq + Hash,
 {
     fn extend<I: IntoIterator<Item = (P, V)>>(&mut self, iter: I) {
         for (prefix, v) in iter {
-            self.insert(prefix, v);
+            self.insert(prefix.into_iter(), v);
         }
+    }
+}
+
+impl<'a, K, V, P> FromIterator<(P, V)> for Trie<K, V>
+where
+    P: IntoIterator<Item = K>,
+    K: Eq + Hash,
+{
+    fn from_iter<I: IntoIterator<Item = (P, V)>>(iter: I) -> Self {
+        let mut trie = Trie::new();
+        trie.extend(iter);
+        trie
     }
 }
 
@@ -391,10 +403,17 @@ mod tests {
         trie.insert_bytes(b"stuff", 1);
         trie.insert_bytes(b"staff", 2);
         trie.insert_bytes(b"stack", 3);
-
         for stuff in trie.iter() {
             println!("{:?}", stuff);
         }
+    }
+
+    #[test]
+    fn test_extend() {
+        let trie = vec![("stuff".chars(), 1), ("stuffx".chars(), 2)]
+            .into_iter()
+            .collect::<Trie<_, _>>();
+        assert_eq!(trie.get_ref("stuff".chars()).unwrap().value, Some(1));
     }
 
 }
