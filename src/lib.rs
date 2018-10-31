@@ -34,10 +34,10 @@ where
 
 impl<K, V> Trie<K, V>
 where
-    K: Eq + Hash,
+    K: Hash + Eq,
 {
-    pub fn new() -> Self {
-        Trie::default()
+    fn new() -> Self {
+        Self::default()
     }
 
     pub fn insert<Q: ?Sized, I: IntoIterator<Item = K>>(&mut self, prefix: I, value: V)
@@ -98,7 +98,8 @@ where
     {
         let mut node = self;
         for c in prefix {
-            match node.children.get_mut(c.borrow()) {
+            let tmp = node;
+            match tmp.children.get_mut(c.borrow()) {
                 Some(next) => node = next,
                 None => return None,
             }
@@ -252,7 +253,7 @@ impl<V> Trie<u8, V> {
     }
 }
 
-pub struct Iter<'a, K, V> {
+pub struct Iter<'a, K: 'a, V: 'a> {
     prefix: Vec<&'a K>,
     started: bool,
     node: &'a Trie<K, V>,
@@ -260,12 +261,12 @@ pub struct Iter<'a, K, V> {
 }
 
 #[derive(Debug)]
-pub struct IterItem<'a, K, V> {
+pub struct IterItem<'a, K: 'a, V: 'a> {
     prefix: Vec<&'a K>,
     value: &'a V,
 }
 
-impl<'a, K, V> IterItem<'a, K, V> {
+impl<'a, K: 'a, V: 'a> IterItem<'a, K, V> {
     pub fn new(prefix: Vec<&'a K>, value: &'a V) -> Self {
         IterItem { prefix, value }
     }
@@ -283,22 +284,43 @@ where
             self.stack.push(self.node.children.iter());
         }
         loop {
-            match self.stack.last_mut() {
+            let node = match self.stack.last_mut() {
                 Some(last) => match last.next() {
-                    Some((k, child)) => {
-                        self.stack.push(child.children.iter());
-                        self.prefix.push(k);
-                        if let Some(ref value) = child.value {
-                            return Some(IterItem::new(self.prefix.clone(), value));
-                        }
-                    }
-                    None => {
-                        self.prefix.pop();
-                        self.stack.pop();
-                    }
+                    Some((k, child)) => Some((k, child)),
+                    None => None,
                 },
                 None => return None,
+            };
+            match node {
+                Some((k, child)) => {
+                    self.stack.push(child.children.iter());
+                    self.prefix.push(k);
+                    if let Some(ref value) = child.value {
+                        return Some(IterItem::new(self.prefix.clone(), value));
+                    }
+                }
+                None => {
+                    self.prefix.pop();
+                    self.stack.pop();
+                }
             }
+            // TODO: requires NLL
+            // match self.stack.last_mut() {
+            //     Some(last) => match last.next() {
+            //         Some((k, child)) => {
+            //             self.stack.push(child.children.iter());
+            //             self.prefix.push(k);
+            //             if let Some(ref value) = child.value {
+            //                 return Some(IterItem::new(self.prefix.clone(), value));
+            //             }
+            //         }
+            //         None => {
+            //             self.prefix.pop();
+            //             self.stack.pop();
+            //         }
+            //     },
+            //     None => return None,
+            // }
         }
     }
 }
@@ -312,6 +334,18 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl<'a, K, V, P> Extend<(P, V)> for &'a mut Trie<K, V>
+where
+    P: IntoIterator<Item = K>,
+    K: Eq + Hash,
+{
+    fn extend<I: IntoIterator<Item = (P, V)>>(&mut self, iter: I) {
+        for (prefix, v) in iter {
+            self.insert(prefix, v);
+        }
     }
 }
 
