@@ -229,28 +229,28 @@ impl<V> Trie<u8, V> {
     where
         S: AsRef<[u8]>,
     {
-        self.insert(prefix.as_ref().into_iter().cloned(), value)
+        self.insert(prefix.as_ref().iter().cloned(), value)
     }
 
     pub fn get_ref_str<Q: ?Sized, S: AsRef<[u8]>>(&self, prefix: S) -> Option<&Self>
     where
         Q: Hash + Eq,
     {
-        self.get_ref(prefix.as_ref().into_iter().cloned())
+        self.get_ref(prefix.as_ref().iter().cloned())
     }
 
     pub fn get_mut_str<Q: ?Sized, S: AsRef<[u8]>>(&mut self, prefix: S) -> Option<&mut Self>
     where
         Q: Hash + Eq,
     {
-        self.get_mut(prefix.as_ref().into_iter().cloned())
+        self.get_mut(prefix.as_ref().iter().cloned())
     }
 
     pub fn remove_str<Q: ?Sized, S: AsRef<[u8]>>(&mut self, prefix: S) -> Option<V>
     where
         Q: Hash + Eq,
     {
-        self.remove(prefix.as_ref().into_iter().cloned())
+        self.remove(prefix.as_ref().iter().cloned())
     }
 }
 
@@ -333,16 +333,18 @@ where
     type IntoIter = Iter<'a, K, V>;
     type Item = IterItem<'a, K, V>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, K, V, P> Extend<(P, V)> for Trie<K, V>
+impl<K, V, P> Extend<(P, V)> for Trie<K, V>
 where
     P: IntoIterator<Item = K>,
     K: Eq + Hash,
 {
+    #[inline]
     fn extend<I: IntoIterator<Item = (P, V)>>(&mut self, iter: I) {
         for (prefix, v) in iter {
             self.insert(prefix.into_iter(), v);
@@ -350,11 +352,12 @@ where
     }
 }
 
-impl<'a, K, V, P> FromIterator<(P, V)> for Trie<K, V>
+impl<K, V, P> FromIterator<(P, V)> for Trie<K, V>
 where
     P: IntoIterator<Item = K>,
     K: Eq + Hash,
 {
+    #[inline]
     fn from_iter<I: IntoIterator<Item = (P, V)>>(iter: I) -> Self {
         let mut trie = Trie::new();
         trie.extend(iter);
@@ -362,7 +365,7 @@ where
     }
 }
 
-impl<'a, K, V, P> Index<P> for Trie<K, V>
+impl<K, V, P> Index<P> for Trie<K, V>
 where
     P: IntoIterator<Item = K>,
     K: Eq + Hash,
