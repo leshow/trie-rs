@@ -285,43 +285,22 @@ where
             self.stack.push(self.node.children.iter());
         }
         loop {
-            let node = match self.stack.last_mut() {
+            match self.stack.last_mut() {
                 Some(last) => match last.next() {
-                    Some((k, child)) => Some((k, child)),
-                    None => None,
+                    Some((k, child)) => {
+                        self.stack.push(child.children.iter());
+                        self.prefix.push(k);
+                        if let Some(ref value) = child.value {
+                            return Some(IterItem::new(self.prefix.clone(), value));
+                        }
+                    }
+                    None => {
+                        self.prefix.pop();
+                        self.stack.pop();
+                    }
                 },
                 None => return None,
-            };
-            match node {
-                Some((k, child)) => {
-                    self.stack.push(child.children.iter());
-                    self.prefix.push(k);
-                    if let Some(ref value) = child.value {
-                        return Some(IterItem::new(self.prefix.clone(), value));
-                    }
-                }
-                None => {
-                    self.prefix.pop();
-                    self.stack.pop();
-                }
             }
-            // TODO: requires NLL
-            // match self.stack.last_mut() {
-            //     Some(last) => match last.next() {
-            //         Some((k, child)) => {
-            //             self.stack.push(child.children.iter());
-            //             self.prefix.push(k);
-            //             if let Some(ref value) = child.value {
-            //                 return Some(IterItem::new(self.prefix.clone(), value));
-            //             }
-            //         }
-            //         None => {
-            //             self.prefix.pop();
-            //             self.stack.pop();
-            //         }
-            //     },
-            //     None => return None,
-            // }
         }
     }
 }
