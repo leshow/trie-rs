@@ -37,7 +37,7 @@ impl<K, V> Trie<K, V>
 where
     K: Hash + Eq,
 {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
